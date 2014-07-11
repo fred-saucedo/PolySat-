@@ -1,0 +1,138 @@
+
+<!DOCTYPE html>
+
+<!-- header('content-type: application/json; charset=utf-8');
+header("access-control-allow-origin: *"); -->
+<meta charset="utf-8">
+
+<link href="../src/nv.d3.css" rel="stylesheet" type="text/css">
+
+
+<style>
+
+body {
+  overflow-y:scroll;
+}
+
+text {
+  font: 12px sans-serif;
+}
+
+
+#chart 
+	svg {
+  height: 450px;
+ 
+  min-width: 50px;
+  min-height: 50px;
+	}
+<!--
+  margin: 50px;
+  Minimum height and width is a good idea to prevent negative SVG dimensions...
+  For example width should be =< margin.left + margin.right + 1,
+  of course 1 pixel for the entire chart would not be very useful, BUT should not have errors
+*/ -->
+
+button{
+	position: absolute;
+	right: 10px; 
+	top:10px; 
+}
+</style>
+<body>
+
+  <div id="chart" class= 'with-3d-shadow with-transitions'>
+    <p><strong>PolySat Telemetry Data</strong>    </p>
+    <svg></svg>
+  </div>
+<button onclick="PolySatGraph()">Update</button>
+<script src="../lib/d3.v3.js"></script>
+<script src="../nv.d3.js"></script>
+<script src="../src/tooltip.js"></script>
+<script src="../src/utils.js"></script>
+<script src="../src/interactiveLayer.js"></script>
+<script src="../src/models/legend.js"></script>
+<script src="../src/models/axis.js"></script>
+<script src="../src/models/scatter.js"></script>
+<script src="../src/models/line.js"></script>
+<script src="../src/models/cumulativeLineChart.js"></script>
+<script src="../src/models/lineChart.js"></script>
+<script src="../src/models/lineWithFocusChart.js"></script>
+<script src="../src/models/historicalBar.js"></script>
+<script src="../src/models/historicalBarChart.js"></script>
+
+<script>
+
+//--------------First Chart---------------------
+
+PolySatGraph(); 
+
+//function for changing the name of key values
+function replaceVal( data,oldVal, newVal) {
+
+	var temp_data = JSON.stringify(data); 
+	
+	return JSON.parse(temp_data.replace(oldVal, newVal)); 
+}
+function PolySatGraph() {
+
+//GLOBAL number of seconds since deployment and unit time stamp
+var timeStamp = 941587200000; 
+
+d3.json("telemetry.json", function(data) {
+
+	var key = "key",old = "daughter_aTmp", newVal = "Temp A"; 
+	
+	//replacing key names----
+
+	var json = replaceVal(replaceVal(data,old, newVal), "daughter_bTmp", "Temp B"); 
+ //wrapping in nv.addGraph provides for faster render times
+  nv.addGraph(function() {
+  //line type
+	  var chart =nv.models.lineWithFocusChart().margin({right:90, left:90})	
+      
+			.x(function(d) { 
+				return d[0]*1000 + timeStamp;}) //formats unit timestamp
+            .y(function(d) { return d[1] })
+			
+            .color(d3.scale.category10().range());
+		
+     chart.xAxis
+	.axisLabel("Date of Sample Taken")
+    .tickFormat(function(d) {
+		return d3.time.format('%Y-%m-%d')(new Date(d));
+          })
+	.scale(d3.time.scale()); //).linear().domain(); //domain();
+ 
+		
+	chart.x2Axis 
+	.axisLabel("Date of Sample Taken")
+        .tickFormat(function(d) {
+		return d3.time.format('%Y-%m-%d')(new Date(d));
+	  
+          });
+
+
+    chart.yAxis
+	.axisLabel("Data Sensor 1")
+        .tickFormat(d3.format(',.2f'))
+	.scale().domain();
+	
+
+    d3.select('#chart svg')
+        .datum(json)
+	.transition().duration(500)
+        .call(chart);
+
+    //TODO: Figure out a good way to do this automatically
+    nv.utils.windowResize(chart.update);
+    chart.dispatch.on('stateChange', function(e) { nv.log('New State:', JSON.stringify(e)); });
+
+    return chart;
+  });
+
+ 
+});}; 
+
+</script>
+
